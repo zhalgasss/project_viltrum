@@ -4,21 +4,37 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.project.viltrum.Main;
 import com.project.viltrum.entities.HeroType;
+import com.project.viltrum.managers.GameManager;
 
 public class MenuScreen implements Screen {
     private Main game;
     private SpriteBatch batch;
-    private BitmapFont font;
+    private BitmapFont titleFont;
+    private BitmapFont menuFont;
+    private BitmapFont smallFont;
+    private Texture background;
 
     public MenuScreen(Main game) {
         this.game = game;
+
         batch = new SpriteBatch();
-        font = new BitmapFont();
-        font.getData().setScale(2);
+
+        titleFont = new BitmapFont();
+        titleFont.getData().setScale(2.2f);
+
+        menuFont = new BitmapFont();
+        menuFont.getData().setScale(1.5f);
+
+        smallFont = new BitmapFont();
+        smallFont.getData().setScale(1.1f);
+
+        background = new Texture("backgrounds/main_menu.jpg");
+        GameManager.getInstance().reset();
     }
 
     @Override
@@ -28,23 +44,40 @@ public class MenuScreen implements Screen {
 
         batch.begin();
 
-        font.draw(batch, "INVINCIBLE: FALL OF EARTH", 360, 650);
-        font.draw(batch, "Choose your hero:", 100, 560);
+        batch.draw(
+            background,
+            0,
+            0,
+            Gdx.graphics.getWidth(),
+            Gdx.graphics.getHeight()
+        );
 
-        font.draw(batch, "1 - Invincible / Mark", 120, 500);
-        font.draw(batch, "2 - Omni-Man / Nolan", 120, 450);
-        font.draw(batch, "3 - Techno Jacket", 120, 400);
+        titleFont.draw(batch, "INVINCIBLE: FALL OF EARTH", 600, 760);
 
-        font.draw(batch, "LOCKED HEROES", 720, 560);
-        font.draw(batch, "Atom Eve - Available after updates", 720, 500);
-        font.draw(batch, "Oliver - Available after updates", 720, 460);
-        font.draw(batch, "Allen - Available after updates", 720, 420);
-        font.draw(batch, "Dinosaurus - Available after updates", 720, 380);
-        font.draw(batch, "Battle Beast - Available after updates", 720, 340);
-        font.draw(batch, "Cosmic Rider - Available after updates", 720, 300);
-        font.draw(batch, "Thaedus - Available after updates", 720, 260);
+        menuFont.draw(batch, "CHOOSE YOUR HERO", 620, 620);
 
-        font.draw(batch, "WASD - Move | SPACE - Attack", 360, 90);
+        menuFont.draw(batch, "1 - Invincible / Mark", 520, 550);
+        menuFont.draw(batch, "2 - Omni-Man / Nolan", 520, 500);
+        menuFont.draw(batch, "3 - Techno Jacket", 520, 450);
+
+        menuFont.draw(batch, "LOCKED HEROES", 760, 560);
+        smallFont.draw(batch, "Atom Eve - Available after updates", 760, 510);
+        smallFont.draw(batch, "Oliver - Available after updates", 760, 475);
+        smallFont.draw(batch, "Allen - Available after updates", 760, 440);
+        smallFont.draw(batch, "Dinosaurus - Available after updates", 760, 405);
+        smallFont.draw(batch, "Battle Beast - Available after updates", 760, 370);
+        smallFont.draw(batch, "Cosmic Rider - Available after updates", 760, 335);
+        smallFont.draw(batch, "Thaedus - Available after updates", 760, 300);
+
+        smallFont.draw(batch,
+            "WASD - Move | SPACE - Attack | SHIFT - Dash",
+            550,
+            120);
+
+        smallFont.draw(batch,
+            "Press 1, 2, or 3 to start",
+            630,
+            80);
 
         batch.end();
 
@@ -70,6 +103,9 @@ public class MenuScreen implements Screen {
     @Override
     public void dispose() {
         batch.dispose();
-        font.dispose();
+        titleFont.dispose();
+        menuFont.dispose();
+        smallFont.dispose();
+        background.dispose();
     }
 }

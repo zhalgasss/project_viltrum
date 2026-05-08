@@ -1,9 +1,10 @@
 package com.project.viltrum.world;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.project.viltrum.entities.*;
+import com.project.viltrum.entities.Boss;
+import com.project.viltrum.entities.Enemy;
+import com.project.viltrum.entities.Player;
 import com.project.viltrum.factory.EnemyFactory;
 
 import java.util.ArrayList;
@@ -18,11 +19,7 @@ public class Room {
 
     public Room(int roomNumber) {
         this.roomNumber = roomNumber;
-
-        if (Gdx.files.internal("rooms/room" + roomNumber + ".png").exists()) {
-            background = new Texture("rooms/room" + roomNumber + ".png");
-        }
-
+        background = new Texture("backgrounds/room" + roomNumber + ".png");
         spawn();
     }
 
@@ -66,9 +63,7 @@ public class Room {
     }
 
     public void render(SpriteBatch batch) {
-        if (background != null) {
-            batch.draw(background, 0, 0, 1280, 720);
-        }
+        batch.draw(background, 0, 0, 1280, 720);
 
         for (Enemy enemy : enemies) {
             enemy.render(batch);
@@ -98,8 +93,14 @@ public class Room {
     }
 
     public void dispose() {
-        if (background != null) {
-            background.dispose();
+        background.dispose();
+
+        for (Enemy enemy : enemies) {
+            enemy.dispose();
+        }
+
+        if (boss != null) {
+            boss.dispose();
         }
     }
 }

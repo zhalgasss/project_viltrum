@@ -25,6 +25,7 @@ public class GameScreen implements Screen {
     public GameScreen(Main game, HeroType selectedHero) {
         this.game = game;
         batch = new SpriteBatch();
+
         font = new BitmapFont();
         font.getData().setScale(1.5f);
 
@@ -93,5 +94,6 @@ public class GameScreen implements Screen {
         batch.dispose();
         font.dispose();
         room.dispose();
+        player.dispose();
     }
 }
