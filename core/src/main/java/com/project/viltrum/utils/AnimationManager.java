@@ -8,38 +8,31 @@ import com.project.viltrum.entities.HeroType;
 
 public class AnimationManager {
     private Texture sheet;
+    private TextureRegion frame;
 
     public AnimationManager(HeroType type) {
         if (type == HeroType.INVINCIBLE) {
             sheet = new Texture("characters/mark.png");
+
+            // Один нормальный кадр Mark из верхнего левого idle блока
+            frame = new TextureRegion(sheet, 70, 70, 120, 210);
+
         } else if (type == HeroType.OMNI_MAN) {
             sheet = new Texture("characters/omniman.png");
+
+            // Один нормальный кадр Omni-Man
+            frame = new TextureRegion(sheet, 75, 70, 120, 210);
+
         } else {
             sheet = new Texture("characters/techno_jacket.png");
+
+            // Один нормальный кадр Techno Jacket
+            frame = new TextureRegion(sheet, 75, 70, 120, 210);
         }
     }
 
     public TextureRegion getFrame(AnimationState state, Direction direction, int frameIndex) {
-        TextureRegion[][] regions = TextureRegion.split(sheet, sheet.getWidth() / 4, sheet.getHeight() / 8);
-
-        int row = 0;
-
-        if (state == AnimationState.IDLE) {
-            if (direction == Direction.DOWN) row = 0;
-            if (direction == Direction.LEFT) row = 1;
-            if (direction == Direction.RIGHT) row = 2;
-            if (direction == Direction.UP) row = 3;
-        }
-
-        if (state == AnimationState.ATTACK) {
-            if (direction == Direction.DOWN) row = 4;
-            if (direction == Direction.LEFT) row = 5;
-            if (direction == Direction.RIGHT) row = 6;
-            if (direction == Direction.UP) row = 7;
-        }
-
-        int col = frameIndex % 4;
-        return regions[row][col];
+        return frame;
     }
 
     public void dispose() {

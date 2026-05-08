@@ -16,8 +16,8 @@ public class Player {
 
     private float x;
     private float y;
-    private float width = 105;
-    private float height = 105;
+    private float width = 75;
+    private float height = 95;
 
     private Direction direction = Direction.DOWN;
     private AnimationState animationState = AnimationState.IDLE;
