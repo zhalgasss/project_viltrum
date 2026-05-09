@@ -9,7 +9,7 @@ public class HeroFactory {
             case INVINCIBLE:
                 return new Player(
                     HeroType.INVINCIBLE,
-                    new CharacterStats(120, 230, 25),
+                    new CharacterStats(120, 230, 40),
                     new PunchAttackStrategy(),
                     550,
                     250

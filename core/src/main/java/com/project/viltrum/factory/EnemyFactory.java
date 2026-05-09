@@ -26,7 +26,7 @@ public class EnemyFactory {
     public static Boss createThragg(float x, float y) {
         return new Boss(
             "Regent Thragg",
-            new CharacterStats(550, 170, 35),
+            new CharacterStats(520, 165, 22),
             x,
             y,
             new BossChaseState()

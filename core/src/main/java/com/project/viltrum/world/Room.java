@@ -3,9 +3,11 @@ package com.project.viltrum.world;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.project.viltrum.entities.Boss;
 import com.project.viltrum.entities.Enemy;
+import com.project.viltrum.entities.HealthPickup;
 import com.project.viltrum.entities.Player;
 import com.project.viltrum.entities.Projectile;
 import com.project.viltrum.factory.EnemyFactory;
@@ -17,16 +19,20 @@ public class Room {
     private int roomNumber;
     private Texture background;
     private Texture bulletTexture;
+    private Texture healthTexture;
 
     private List<Enemy> enemies = new ArrayList<>();
     private List<Rectangle> obstacles = new ArrayList<>();
     private List<Projectile> projectiles = new ArrayList<>();
+    private List<HealthPickup> healthPickups = new ArrayList<>();
     private Boss boss;
+    private float healthSpawnTimer = 9f;
 
     public Room(int roomNumber) {
         this.roomNumber = roomNumber;
         background = new Texture("backgrounds/room" + roomNumber + ".png");
         bulletTexture = createBulletTexture();
+        healthTexture = createHealthTexture();
         spawn();
     }
 
@@ -47,19 +53,19 @@ public class Room {
         if (roomNumber == 3) {
             enemies.add(EnemyFactory.createFlaxan(250, 300));
             enemies.add(EnemyFactory.createFlaxan(850, 300));
-            boss = EnemyFactory.createConquest(650, 420);
+            boss = EnemyFactory.createConquest(650, 505);
             addHangarObstacles();
         }
 
         if (roomNumber == 4) {
-            boss = EnemyFactory.createThragg(650, 420);
+            boss = EnemyFactory.createThragg(815, 470);
             addCommandRoomObstacles();
         }
     }
 
     public void update(float delta, Player player) {
         for (Enemy enemy : enemies) {
-            enemy.update(delta, player, obstacles);
+            enemy.update(delta, player, obstacles, enemies);
 
             Projectile projectile = enemy.shootAt(player);
             if (projectile != null) {
@@ -67,25 +73,31 @@ public class Room {
             }
         }
 
-        enemies.removeIf(Enemy::isDead);
+        enemies.removeIf(Enemy::canRemove);
 
         if (boss != null) {
-            boss.update(delta, player, obstacles);
+            boss.update(delta, player, obstacles, enemies, projectiles);
 
-            if (boss.isDead()) {
+            if (boss.canRemove()) {
                 boss = null;
             }
         }
 
         for (Projectile projectile : projectiles) {
-            projectile.update(delta, player, obstacles);
+            projectile.update(delta, player, getEnemies(), obstacles);
         }
 
         projectiles.removeIf(projectile -> !projectile.isActive());
+
+        updateHealthPickups(delta, player);
     }
 
     public void render(SpriteBatch batch) {
         batch.draw(background, 0, 0, 1280, 720);
+
+        for (HealthPickup healthPickup : healthPickups) {
+            healthPickup.render(batch, healthTexture);
+        }
 
         for (Enemy enemy : enemies) {
             enemy.render(batch);
@@ -118,13 +130,26 @@ public class Room {
         return roomNumber;
     }
 
+    public Boss getBoss() {
+        return boss;
+    }
+
+    public boolean hasBossFight() {
+        return boss != null && !boss.isDead();
+    }
+
     public List<Rectangle> getObstacles() {
         return obstacles;
+    }
+
+    public List<Projectile> getProjectiles() {
+        return projectiles;
     }
 
     public void dispose() {
         background.dispose();
         bulletTexture.dispose();
+        healthTexture.dispose();
 
         for (Enemy enemy : enemies) {
             enemy.dispose();
@@ -150,16 +175,10 @@ public class Room {
     }
 
     private void addCommandRoomObstacles() {
-        obstacles.add(new Rectangle(468, 295, 322, 135));
-        obstacles.add(new Rectangle(318, 414, 190, 66));
-        obstacles.add(new Rectangle(275, 240, 160, 75));
-        obstacles.add(new Rectangle(900, 384, 176, 72));
-        obstacles.add(new Rectangle(870, 195, 150, 72));
-        obstacles.add(new Rectangle(957, 603, 112, 70));
-        obstacles.add(new Rectangle(640, 125, 68, 50));
-        obstacles.add(new Rectangle(520, 165, 72, 58));
-        obstacles.add(new Rectangle(410, 542, 130, 66));
-        obstacles.add(new Rectangle(606, 498, 92, 62));
+        obstacles.add(new Rectangle(500, 315, 250, 72));
+        obstacles.add(new Rectangle(295, 235, 110, 55));
+        obstacles.add(new Rectangle(910, 400, 120, 58));
+        obstacles.add(new Rectangle(950, 610, 90, 52));
     }
 
     private Texture createBulletTexture() {
@@ -173,6 +192,65 @@ public class Room {
         pixmap.fillRectangle(0, 6, 8, 4);
         pixmap.setColor(1f, 1f, 0.78f, 1);
         pixmap.fillRectangle(20, 4, 10, 8);
+
+        Texture texture = new Texture(pixmap);
+        pixmap.dispose();
+        return texture;
+    }
+
+    private void updateHealthPickups(float delta, Player player) {
+        for (HealthPickup healthPickup : healthPickups) {
+            healthPickup.update(player);
+        }
+
+        healthPickups.removeIf(healthPickup -> !healthPickup.isActive());
+
+        healthSpawnTimer -= delta;
+        if (healthSpawnTimer > 0) {
+            return;
+        }
+
+        healthSpawnTimer = MathUtils.random(11f, 17f);
+
+        if (healthPickups.size() >= 2 || MathUtils.randomBoolean(0.45f)) {
+            return;
+        }
+
+        spawnHealthPickup();
+    }
+
+    private void spawnHealthPickup() {
+        for (int attempt = 0; attempt < 18; attempt++) {
+            float x = MathUtils.random(120f, 1120f);
+            float y = MathUtils.random(105f, 575f);
+            Rectangle pickupArea = new Rectangle(x, y, 28, 28);
+
+            boolean blocked = false;
+            for (Rectangle obstacle : obstacles) {
+                if (pickupArea.overlaps(obstacle)) {
+                    blocked = true;
+                    break;
+                }
+            }
+
+            if (!blocked) {
+                healthPickups.add(new HealthPickup(x, y, 28));
+                return;
+            }
+        }
+    }
+
+    private Texture createHealthTexture() {
+        Pixmap pixmap = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
+        pixmap.setBlending(Pixmap.Blending.None);
+        pixmap.setColor(0, 0, 0, 0);
+        pixmap.fill();
+        pixmap.setColor(0.95f, 0.95f, 0.95f, 1f);
+        pixmap.fillRectangle(7, 12, 18, 8);
+        pixmap.fillRectangle(12, 7, 8, 18);
+        pixmap.setColor(0.1f, 0.8f, 0.2f, 1f);
+        pixmap.drawRectangle(6, 11, 20, 10);
+        pixmap.drawRectangle(11, 6, 10, 20);
 
         Texture texture = new Texture(pixmap);
         pixmap.dispose();

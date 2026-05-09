@@ -1,27 +1,92 @@
 package com.project.viltrum.state;
 
+import com.badlogic.gdx.math.Rectangle;
+import com.project.viltrum.entities.AnimationState;
 import com.project.viltrum.entities.Boss;
+import com.project.viltrum.entities.Enemy;
 import com.project.viltrum.entities.Player;
+import com.project.viltrum.entities.Projectile;
+
+import java.util.List;
 
 public class BossChaseState implements BossState {
     @Override
-    public void update(Boss boss, Player player, float delta) {
-        if (boss.getStats().hp <= boss.getStats().maxHp / 2) {
-            boss.setState(new BossRageState());
+    public void update(
+        Boss boss,
+        Player player,
+        float delta,
+        List<Rectangle> obstacles,
+        List<Enemy> summons,
+        List<Projectile> projectiles
+    ) {
+        if (boss.getName().equals("Conquest")) {
+            updateConquest(boss, player, delta, obstacles);
             return;
         }
 
-        float dx = player.getX() - boss.getHitbox().x;
-        float dy = player.getY() - boss.getHitbox().y;
-        float length = (float) Math.sqrt(dx * dx + dy * dy);
+        updateThragg(boss, player, delta, obstacles, summons, projectiles);
+    }
 
-        if (length > 5) {
-            boss.x += dx / length * boss.getStats().speed * delta;
-            boss.y += dy / length * boss.getStats().speed * delta;
+    private void updateConquest(Boss boss, Player player, float delta, List<Rectangle> obstacles) {
+        if (boss.shouldEnterRage(0.5f)) {
+            boss.enterRageMode();
+            return;
         }
 
-        if (boss.getHitbox().overlaps(player.getHitbox())) {
-            player.takeDamage(boss.getStats().damage * delta);
+        if (boss.updateDash(player, delta, obstacles, 1.35f)) {
+            return;
+        }
+
+        float distance = boss.distanceTo(player.getCenterX(), player.getCenterY());
+
+        if (boss.canUseSpecial() && distance < 560) {
+            boss.startDash(player, 1.8f);
+            return;
+        }
+
+        if (distance > 62) {
+            boss.moveToward(player.getCenterX(), player.getCenterY(), delta, obstacles, 62);
+            boss.setAnimationState(AnimationState.WALK);
+        } else {
+            boss.setAnimationState(AnimationState.IDLE);
+            boss.tryMeleeAttack(player, 0.8f, 1.0f);
+        }
+    }
+
+    private void updateThragg(
+        Boss boss,
+        Player player,
+        float delta,
+        List<Rectangle> obstacles,
+        List<Enemy> summons,
+        List<Projectile> projectiles
+    ) {
+        if (boss.shouldEnterRage(0.3f)) {
+            boss.enterRageMode();
+            return;
+        }
+
+        if (boss.updateTelegraphedAttack(player, delta, 1.0f)) {
+            return;
+        }
+
+        float distance = boss.distanceTo(player.getCenterX(), player.getCenterY());
+
+        if (boss.canSummon()) {
+            boss.summonFlaxans(summons, 2);
+            boss.resetSummonCooldown(7.5f);
+        }
+
+        if (boss.canUseSpecial() && distance < 145) {
+            boss.startTelegraphedAttack(145, 1.5f, 2.0f);
+            return;
+        }
+
+        if (distance > 72) {
+            boss.moveToward(player.getCenterX(), player.getCenterY(), delta, obstacles, 72);
+            boss.setAnimationState(AnimationState.WALK);
+        } else {
+            boss.setAnimationState(AnimationState.IDLE);
         }
     }
 }

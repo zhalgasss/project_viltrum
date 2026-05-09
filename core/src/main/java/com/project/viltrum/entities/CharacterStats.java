@@ -18,6 +18,11 @@ public class CharacterStats {
         if (hp < 0) hp = 0;
     }
 
+    public void heal(float amount) {
+        hp += amount;
+        if (hp > maxHp) hp = maxHp;
+    }
+
     public boolean isDead() {
         return hp <= 0;
     }
