@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -18,11 +19,14 @@ public class MenuScreen implements Screen {
     private BitmapFont menuFont;
     private BitmapFont smallFont;
     private Texture background;
+    private OrthographicCamera camera;
 
     public MenuScreen(Main game) {
         this.game = game;
 
         batch = new SpriteBatch();
+        camera = new OrthographicCamera();
+        camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         titleFont = new BitmapFont();
         titleFont.getData().setScale(2.2f);
@@ -42,6 +46,7 @@ public class MenuScreen implements Screen {
         Gdx.gl.glClearColor(0.01f, 0.01f, 0.04f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
         batch.draw(
@@ -95,7 +100,10 @@ public class MenuScreen implements Screen {
     }
 
     @Override public void show() {}
-    @Override public void resize(int width, int height) {}
+    @Override
+    public void resize(int width, int height) {
+        camera.setToOrtho(false, width, height);
+    }
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}

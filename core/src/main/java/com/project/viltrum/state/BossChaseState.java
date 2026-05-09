@@ -21,7 +21,7 @@ public class BossChaseState implements BossState {
         }
 
         if (boss.getHitbox().overlaps(player.getHitbox())) {
-            player.getStats().takeDamage(boss.getStats().damage * delta);
+            player.takeDamage(boss.getStats().damage * delta);
         }
     }
 }

@@ -2,6 +2,9 @@ package com.project.viltrum.entities;
 
 import com.project.viltrum.state.BossState;
 
+import com.badlogic.gdx.math.Rectangle;
+import java.util.List;
+
 public class Boss extends Enemy {
     private BossState state;
 
@@ -11,7 +14,8 @@ public class Boss extends Enemy {
     }
 
     @Override
-    public void update(float delta, Player player) {
+    public void update(float delta, Player player, List<Rectangle> obstacles) {
+        facePlayer(player);
         state.update(this, player, delta);
     }
 

@@ -2,7 +2,9 @@ package com.project.viltrum.entities;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.project.viltrum.strategy.AttackStrategy;
 import com.project.viltrum.utils.AnimationManager;
@@ -28,6 +30,7 @@ public class Player {
     private AnimationManager animationManager;
     private float animationTimer = 0;
     private int frameIndex = 0;
+    private float hurtTimer = 0;
 
     public Player(HeroType type, CharacterStats stats, AttackStrategy attackStrategy, float x, float y) {
         this.type = type;
@@ -38,11 +41,15 @@ public class Player {
         this.animationManager = new AnimationManager(type);
     }
 
-    public void update(float delta, List<Enemy> enemies) {
-        move(delta);
+    public void update(float delta, List<Enemy> enemies, List<Rectangle> obstacles) {
+        move(delta, obstacles);
 
         if (attackCooldown > 0) {
             attackCooldown -= delta;
+        }
+
+        if (hurtTimer > 0) {
+            hurtTimer -= delta;
         }
 
         if (attackAnimationTimer > 0) {
@@ -60,7 +67,7 @@ public class Player {
         }
     }
 
-    private void move(float delta) {
+    private void move(float delta, List<Rectangle> obstacles) {
         float dx = 0;
         float dy = 0;
 
@@ -89,13 +96,30 @@ public class Player {
             dy *= 1.8f;
         }
 
-        x += dx;
-        y += dy;
+        moveAxis(dx, 0, obstacles);
+        moveAxis(0, dy, obstacles);
 
         if (x < 70) x = 70;
         if (x > 1130) x = 1130;
         if (y < 70) y = 70;
         if (y > 580) y = 580;
+    }
+
+    private void moveAxis(float dx, float dy, List<Rectangle> obstacles) {
+        if (dx == 0 && dy == 0) {
+            return;
+        }
+
+        x += dx;
+        y += dy;
+
+        for (Rectangle obstacle : obstacles) {
+            if (getHitbox().overlaps(obstacle)) {
+                x -= dx;
+                y -= dy;
+                return;
+            }
+        }
     }
 
     public void render(SpriteBatch batch) {
@@ -106,13 +130,18 @@ public class Player {
             animationTimer = 0;
         }
 
-        batch.draw(
-            animationManager.getFrame(animationState, direction, frameIndex),
-            x,
-            y,
-            width,
-            height
-        );
+        TextureRegion frame = animationManager.getFrame(animationState, direction, frameIndex);
+        float drawHeight = height;
+        float drawWidth = drawHeight * frame.getRegionWidth() / frame.getRegionHeight();
+        float drawX = x + (width - drawWidth) / 2f;
+
+        if (hurtTimer > 0) {
+            float flash = ((int) (hurtTimer * 18)) % 2 == 0 ? 1f : 0.45f;
+            batch.setColor(1f, flash, flash, 1f);
+        }
+
+        batch.draw(frame, drawX, y, drawWidth, drawHeight);
+        batch.setColor(Color.WHITE);
     }
 
     public Rectangle getHitbox() {
@@ -137,6 +166,11 @@ public class Player {
 
     public void dispose() {
         animationManager.dispose();
+    }
+
+    public void takeDamage(float damage) {
+        stats.takeDamage(damage);
+        hurtTimer = 0.35f;
     }
 
     public HeroType getType() {
