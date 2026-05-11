@@ -53,8 +53,8 @@ public class Room {
         if (roomNumber == 3) {
             enemies.add(EnemyFactory.createFlaxan(250, 300));
             enemies.add(EnemyFactory.createFlaxan(850, 300));
-            boss = EnemyFactory.createConquest(650, 505);
-            addHangarObstacles();
+            boss = EnemyFactory.createConquest(640, 520);
+            addReactorRoomObstacles();
         }
 
         if (roomNumber == 4) {
@@ -179,6 +179,27 @@ public class Room {
         obstacles.add(new Rectangle(295, 235, 110, 55));
         obstacles.add(new Rectangle(910, 400, 120, 58));
         obstacles.add(new Rectangle(950, 610, 90, 52));
+    }
+
+    private void addReactorRoomObstacles() {
+        obstacles.add(new Rectangle(0, 650, 1280, 70));
+        obstacles.add(new Rectangle(0, 0, 1280, 48));
+        obstacles.add(new Rectangle(0, 0, 48, 720));
+        obstacles.add(new Rectangle(1232, 0, 48, 720));
+
+        obstacles.add(new Rectangle(520, 300, 240, 106));
+        obstacles.add(new Rectangle(552, 405, 176, 88));
+        obstacles.add(new Rectangle(495, 260, 290, 46));
+
+        obstacles.add(new Rectangle(325, 397, 105, 54));
+        obstacles.add(new Rectangle(845, 397, 110, 54));
+        obstacles.add(new Rectangle(285, 210, 118, 52));
+        obstacles.add(new Rectangle(865, 210, 120, 52));
+
+        obstacles.add(new Rectangle(167, 484, 80, 74));
+        obstacles.add(new Rectangle(1035, 484, 82, 74));
+        obstacles.add(new Rectangle(148, 97, 125, 56));
+        obstacles.add(new Rectangle(1002, 98, 132, 56));
     }
 
     private Texture createBulletTexture() {

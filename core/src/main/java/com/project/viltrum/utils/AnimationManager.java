@@ -19,21 +19,43 @@ import java.util.Map;
 
 public class AnimationManager {
     private static final float FRAME_DURATION = 0.13f;
+    private static final String CHARACTER_GRID_SHEET = "characters/character_grid_sheet.png";
 
     private final Map<AnimationState, Map<Direction, Animation<TextureRegion>>> animations = new EnumMap<>(AnimationState.class);
     private final List<Texture> textures = new ArrayList<>();
     private final SheetLayout layout;
+    private final int gridRow;
+
+    public enum CharacterSprite {
+        THRAGG(0),
+        CONQUEST(1),
+        INVINCIBLE(2),
+        OMNI_MAN(3),
+        TECHNO_JACKET(4),
+        FLAXAN(5);
+
+        private final int row;
+
+        CharacterSprite(int row) {
+            this.row = row;
+        }
+    }
 
     public AnimationManager(HeroType type) {
-        this(getHeroSheetPath(type), type == HeroType.INVINCIBLE ? SheetLayout.INVINCIBLE : SheetLayout.AUTO);
+        this(CHARACTER_GRID_SHEET, SheetLayout.CHARACTER_GRID, getHeroSprite(type).row);
+    }
+
+    public AnimationManager(CharacterSprite character) {
+        this(CHARACTER_GRID_SHEET, SheetLayout.CHARACTER_GRID, character.row);
     }
 
     public AnimationManager(String sheetPath) {
-        this(sheetPath, getSheetLayout(sheetPath));
+        this(sheetPath, getSheetLayout(sheetPath), -1);
     }
 
-    private AnimationManager(String sheetPath, SheetLayout layout) {
+    private AnimationManager(String sheetPath, SheetLayout layout, int gridRow) {
         this.layout = layout;
+        this.gridRow = gridRow;
 
         for (AnimationState state : AnimationState.values()) {
             animations.put(state, new EnumMap<>(Direction.class));
@@ -61,19 +83,23 @@ public class AnimationManager {
         }
     }
 
-    private static String getHeroSheetPath(HeroType type) {
+    private static CharacterSprite getHeroSprite(HeroType type) {
         if (type == HeroType.INVINCIBLE) {
-            return "characters/mark_sheet.png";
+            return CharacterSprite.INVINCIBLE;
         }
 
         if (type == HeroType.OMNI_MAN) {
-            return "characters/omniman_sheet.png";
+            return CharacterSprite.OMNI_MAN;
         }
 
-        return "characters/techno_jacket_sheet.png";
+        return CharacterSprite.TECHNO_JACKET;
     }
 
     private static SheetLayout getSheetLayout(String sheetPath) {
+        if (sheetPath.contains("character_grid_sheet")) {
+            return SheetLayout.CHARACTER_GRID;
+        }
+
         if (sheetPath.contains("thragg_idle")) {
             return SheetLayout.THRAGG_IDLE;
         }
@@ -82,7 +108,9 @@ public class AnimationManager {
     }
 
     private void loadFrames(Pixmap pixmap) {
-        if (layout == SheetLayout.INVINCIBLE) {
+        if (layout == SheetLayout.CHARACTER_GRID) {
+            loadCharacterGridSheet(pixmap);
+        } else if (layout == SheetLayout.INVINCIBLE) {
             loadInvincibleSheet(pixmap);
         } else if (layout == SheetLayout.CONQUEST) {
             loadConquestSheet(pixmap);
@@ -93,6 +121,38 @@ public class AnimationManager {
         } else {
             loadSquareSheet(pixmap);
         }
+    }
+
+    private void loadCharacterGridSheet(Pixmap pixmap) {
+        int[] rowTop = {75, 216, 360, 505, 652, 798};
+        int[] rowBottom = {214, 358, 503, 649, 796, 978};
+        int row = Math.max(0, Math.min(gridRow, rowTop.length - 1));
+        int y = rowTop[row];
+        int height = rowBottom[row] - y + 1;
+
+        addWalkSection(pixmap, Direction.DOWN, 96, y, 136, height, 3);
+        addWalkSection(pixmap, Direction.LEFT, 233, y, 198, height, 5);
+        addWalkSection(pixmap, Direction.RIGHT, 433, y, 167, height, 4);
+        addWalkSection(pixmap, Direction.UP, 602, y, 156, height, 3);
+
+        addSection(pixmap, AnimationState.ATTACK, Direction.DOWN, 759, y, 173, height, 3);
+        addSection(pixmap, AnimationState.ATTACK, Direction.LEFT, 934, y, 188, height, 3);
+        addSection(pixmap, AnimationState.ATTACK, Direction.RIGHT, 1124, y, 219, height, 3);
+        addSection(pixmap, AnimationState.ATTACK, Direction.UP, 1345, y, 189, height, 3);
+    }
+
+    private void addWalkSection(
+        Pixmap pixmap,
+        Direction direction,
+        int x,
+        int y,
+        int width,
+        int height,
+        int frameCount
+    ) {
+        int firstFrameWidth = width / frameCount;
+        addSection(pixmap, AnimationState.IDLE, direction, x, y, firstFrameWidth, height, 1);
+        addSection(pixmap, AnimationState.WALK, direction, x, y, width, height, frameCount);
     }
 
     private void loadInvincibleSheet(Pixmap pixmap) {
@@ -210,23 +270,63 @@ public class AnimationManager {
         int height,
         int frameCount
     ) {
-        List<TextureRegion> result = new ArrayList<>();
+        List<FrameCrop> frameCrops = new ArrayList<>();
         int frameWidth = width / frameCount;
+        int commonMinX = Integer.MAX_VALUE;
+        int commonMinY = Integer.MAX_VALUE;
+        int commonMaxX = 0;
+        int commonMaxY = 0;
+        int maxCellWidth = 0;
+        int maxCellHeight = 0;
 
         for (int i = 0; i < frameCount; i++) {
             int frameX = x + i * frameWidth;
             int currentFrameWidth = i == frameCount - 1 ? x + width - frameX : frameWidth;
-            TextureRegion frame = cropFrame(pixmap, frameX, y, currentFrameWidth, height);
+            FrameCrop frameCrop = analyzeFrame(pixmap, frameX, y, currentFrameWidth, height);
 
-            if (frame != null) {
-                result.add(frame);
+            if (frameCrop != null) {
+                frameCrops.add(frameCrop);
+                maxCellWidth = Math.max(maxCellWidth, frameCrop.cellWidth);
+                maxCellHeight = Math.max(maxCellHeight, frameCrop.cellHeight);
+                commonMinX = Math.min(commonMinX, frameCrop.minX);
+                commonMinY = Math.min(commonMinY, frameCrop.minY);
+                commonMaxX = Math.max(commonMaxX, frameCrop.maxX);
+                commonMaxY = Math.max(commonMaxY, frameCrop.maxY);
             }
         }
 
-        if (result.isEmpty()) {
+        if (frameCrops.isEmpty()) {
             Texture fallback = createFrameTexture(pixmap, x, y, width, height, new boolean[height][width]);
             textures.add(fallback);
+            List<TextureRegion> result = new ArrayList<>();
             result.add(new TextureRegion(fallback));
+            Animation<TextureRegion> animation = new Animation<>(FRAME_DURATION, new Array<>(result.toArray(new TextureRegion[0])));
+            animation.setPlayMode(isLooping(state) ? Animation.PlayMode.LOOP : Animation.PlayMode.NORMAL);
+            animations.get(state).put(direction, animation);
+            return;
+        }
+
+        int margin = 8;
+        commonMinX = Math.max(0, commonMinX - margin);
+        commonMinY = Math.max(0, commonMinY - margin);
+        commonMaxX = Math.min(maxCellWidth - 1, commonMaxX + margin);
+        commonMaxY = Math.min(maxCellHeight - 1, commonMaxY + margin);
+
+        int croppedWidth = commonMaxX - commonMinX + 1;
+        int croppedHeight = commonMaxY - commonMinY + 1;
+        List<TextureRegion> result = new ArrayList<>();
+
+        for (FrameCrop frameCrop : frameCrops) {
+            Texture texture = createStableFrameTexture(
+                pixmap,
+                frameCrop,
+                commonMinX,
+                commonMinY,
+                croppedWidth,
+                croppedHeight
+            );
+            textures.add(texture);
+            result.add(new TextureRegion(texture));
         }
 
         Animation<TextureRegion> animation = new Animation<>(FRAME_DURATION, new Array<>(result.toArray(new TextureRegion[0])));
@@ -236,6 +336,38 @@ public class AnimationManager {
 
     private boolean isLooping(AnimationState state) {
         return state == AnimationState.IDLE || state == AnimationState.WALK;
+    }
+
+    private FrameCrop analyzeFrame(Pixmap pixmap, int x, int y, int width, int height) {
+        int cellX = Math.max(0, x);
+        int cellY = Math.max(0, y);
+        int cellWidth = Math.min(width, pixmap.getWidth() - cellX);
+        int cellHeight = Math.min(height, pixmap.getHeight() - cellY);
+        boolean[][] background = findConnectedBackground(pixmap, cellX, cellY, cellWidth, cellHeight);
+
+        int minX = cellWidth;
+        int minY = cellHeight;
+        int maxX = 0;
+        int maxY = 0;
+        int contentPixels = 0;
+
+        for (int localY = 0; localY < cellHeight; localY++) {
+            for (int localX = 0; localX < cellWidth; localX++) {
+                if (!background[localY][localX]) {
+                    minX = Math.min(minX, localX);
+                    minY = Math.min(minY, localY);
+                    maxX = Math.max(maxX, localX);
+                    maxY = Math.max(maxY, localY);
+                    contentPixels++;
+                }
+            }
+        }
+
+        if (contentPixels < 80) {
+            return null;
+        }
+
+        return new FrameCrop(cellX, cellY, cellWidth, cellHeight, background, minX, minY, maxX, maxY);
     }
 
     private TextureRegion cropFrame(Pixmap pixmap, int x, int y, int width, int height) {
@@ -358,6 +490,45 @@ public class AnimationManager {
         return texture;
     }
 
+    private Texture createStableFrameTexture(
+        Pixmap source,
+        FrameCrop frameCrop,
+        int cropX,
+        int cropY,
+        int width,
+        int height
+    ) {
+        Pixmap frame = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+        frame.setBlending(Pixmap.Blending.None);
+
+        for (int localY = 0; localY < height; localY++) {
+            for (int localX = 0; localX < width; localX++) {
+                int sourceLocalX = cropX + localX;
+                int sourceLocalY = cropY + localY;
+
+                if (
+                    sourceLocalX < 0 ||
+                        sourceLocalX >= frameCrop.cellWidth ||
+                        sourceLocalY < 0 ||
+                        sourceLocalY >= frameCrop.cellHeight ||
+                        frameCrop.background[sourceLocalY][sourceLocalX]
+                ) {
+                    frame.drawPixel(localX, localY, 0x00000000);
+                } else {
+                    frame.drawPixel(
+                        localX,
+                        localY,
+                        source.getPixel(frameCrop.cellX + sourceLocalX, frameCrop.cellY + sourceLocalY) | 0x000000ff
+                    );
+                }
+            }
+        }
+
+        Texture texture = new Texture(frame);
+        frame.dispose();
+        return texture;
+    }
+
     private boolean isEdgeBackground(int color) {
         int red = color >>> 24 & 0xff;
         int green = color >>> 16 & 0xff;
@@ -375,8 +546,43 @@ public class AnimationManager {
 
     private enum SheetLayout {
         AUTO,
+        CHARACTER_GRID,
         INVINCIBLE,
         CONQUEST,
         THRAGG_IDLE
+    }
+
+    private static class FrameCrop {
+        final int cellX;
+        final int cellY;
+        final int cellWidth;
+        final int cellHeight;
+        final boolean[][] background;
+        final int minX;
+        final int minY;
+        final int maxX;
+        final int maxY;
+
+        FrameCrop(
+            int cellX,
+            int cellY,
+            int cellWidth,
+            int cellHeight,
+            boolean[][] background,
+            int minX,
+            int minY,
+            int maxX,
+            int maxY
+        ) {
+            this.cellX = cellX;
+            this.cellY = cellY;
+            this.cellWidth = cellWidth;
+            this.cellHeight = cellHeight;
+            this.background = background;
+            this.minX = minX;
+            this.minY = minY;
+            this.maxX = maxX;
+            this.maxY = maxY;
+        }
     }
 }

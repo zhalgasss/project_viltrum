@@ -50,16 +50,16 @@ public class Enemy {
         this.y = y;
 
         if (name.equals("Flaxan Soldier")) {
-            animationManager = new AnimationManager("characters/flaxan_sheet.png");
+            animationManager = new AnimationManager(AnimationManager.CharacterSprite.FLAXAN);
         } else if (name.equals("Conquest")) {
-            animationManager = new AnimationManager("characters/conquest_sheet.png");
+            animationManager = new AnimationManager(AnimationManager.CharacterSprite.CONQUEST);
             width = 94;
             height = 94;
             hitboxWidth = 42;
             hitboxHeight = 52;
             hitboxOffsetY = 10;
         } else if (name.equals("Regent Thragg")) {
-            animationManager = new AnimationManager("characters/thragg_idle.png");
+            animationManager = new AnimationManager(AnimationManager.CharacterSprite.THRAGG);
             width = 112;
             height = 112;
             hitboxWidth = 48;
@@ -103,7 +103,7 @@ public class Enemy {
             return null;
         }
 
-        animationStateMachine.playLocked(AnimationState.ATTACK, 0.28f);
+        animationStateMachine.playLocked(AnimationState.ATTACK, 0.42f);
         shootCooldown = 1.55f;
         EventBus.getInstance().publish(GameEvent.point(GameEventType.PROJECTILE_FIRED, getCenterX(), getCenterY()));
         return new Projectile(getCenterX(), getCenterY(), player.getCenterX(), player.getCenterY(), 430, 10);
@@ -219,8 +219,23 @@ public class Enemy {
         updateDirection(dx, dy);
 
         if (length > stopDistance && length > 0) {
-            moveAxis(dx / length * speed * delta, 0, obstacles);
-            moveAxis(0, dy / length * speed * delta, obstacles);
+            float stepX = dx / length * speed * delta;
+            float stepY = dy / length * speed * delta;
+            boolean movedX = moveAxis(stepX, 0, obstacles);
+            boolean movedY = moveAxis(0, stepY, obstacles);
+
+            if ((!movedX || !movedY) && length > stopDistance + 8f) {
+                float sideX = -dy / length * speed * delta * 0.7f;
+                float sideY = dx / length * speed * delta * 0.7f;
+
+                if (!moveAxis(sideX, 0, obstacles)) {
+                    moveAxis(-sideX, 0, obstacles);
+                }
+
+                if (!moveAxis(0, sideY, obstacles)) {
+                    moveAxis(0, -sideY, obstacles);
+                }
+            }
         }
     }
 
@@ -230,7 +245,7 @@ public class Enemy {
         }
 
         attackCooldown = cooldown;
-        animationStateMachine.playLocked(AnimationState.ATTACK, 0.28f);
+        animationStateMachine.playLocked(AnimationState.ATTACK, 0.42f);
 
         if (getHitbox().overlaps(player.getHitbox())) {
             boolean damaged = player.takeDamage(stats.damage * damageMultiplier, getCenterX(), getCenterY());
@@ -253,6 +268,8 @@ public class Enemy {
         if (deathTimer > 0) deathTimer -= delta;
 
         applyKnockback(delta, obstacles);
+        resolveObstacleOverlaps(obstacles);
+        clampToRoomBounds();
     }
 
     protected void facePlayer(Player player) {
@@ -265,9 +282,9 @@ public class Enemy {
         return (float) Math.sqrt(dx * dx + dy * dy);
     }
 
-    protected void moveAxis(float dx, float dy, List<Rectangle> obstacles) {
+    protected boolean moveAxis(float dx, float dy, List<Rectangle> obstacles) {
         if (dx == 0 && dy == 0) {
-            return;
+            return true;
         }
 
         x += dx;
@@ -277,9 +294,11 @@ public class Enemy {
             if (getHitbox().overlaps(obstacle)) {
                 x -= dx;
                 y -= dy;
-                return;
+                return false;
             }
         }
+
+        return true;
     }
 
     private void applyHurtColor(SpriteBatch batch) {
@@ -315,6 +334,47 @@ public class Enemy {
         moveAxis(0, knockbackY * delta, obstacles);
         knockbackX *= 0.84f;
         knockbackY *= 0.84f;
+    }
+
+    protected void resolveObstacleOverlaps(List<Rectangle> obstacles) {
+        for (int pass = 0; pass < 5; pass++) {
+            boolean moved = false;
+            Rectangle own = getHitbox();
+
+            for (Rectangle obstacle : obstacles) {
+                if (!own.overlaps(obstacle)) {
+                    continue;
+                }
+
+                float pushLeft = own.x + own.width - obstacle.x;
+                float pushRight = obstacle.x + obstacle.width - own.x;
+                float pushDown = own.y + own.height - obstacle.y;
+                float pushUp = obstacle.y + obstacle.height - own.y;
+                float horizontal = Math.min(pushLeft, pushRight);
+                float vertical = Math.min(pushDown, pushUp);
+                float padding = 0.6f;
+
+                if (horizontal < vertical) {
+                    x += pushLeft < pushRight ? -horizontal - padding : horizontal + padding;
+                } else {
+                    y += pushDown < pushUp ? -vertical - padding : vertical + padding;
+                }
+
+                moved = true;
+                own = getHitbox();
+            }
+
+            if (!moved) {
+                return;
+            }
+        }
+    }
+
+    private void clampToRoomBounds() {
+        if (x < 45) x = 45;
+        if (x > 1235 - width) x = 1235 - width;
+        if (y < 45) y = 45;
+        if (y > 665 - height) y = 665 - height;
     }
 
     private void separateFromAllies(List<Enemy> allies, List<Rectangle> obstacles) {

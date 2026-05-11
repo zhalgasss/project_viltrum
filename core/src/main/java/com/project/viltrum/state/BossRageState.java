@@ -67,18 +67,28 @@ public class BossRageState implements BossState {
 
         float distance = boss.distanceTo(player.getCenterX(), player.getCenterY());
 
-        if (boss.canSummon()) {
-            boss.summonFlaxans(summons, 3);
-            boss.resetSummonCooldown(5.2f);
+        if (boss.canUseRepel() && ((boss.hasClosePressure() && distance < 205f) || distance < 62f)) {
+            if (boss.tryRepelPlayer(player, 8f, 640f, 1.75f)) {
+                return;
+            }
         }
 
-        if (boss.canUseSpecial() && distance < 165) {
-            boss.startTelegraphedAttack(165, 1.5f, 2.0f);
+        if (boss.canUseSpecial() && distance < 190f) {
+            boss.startTelegraphedAttack(175f, 0.4f, 1.1f);
             return;
         }
 
-        if (distance > 64) {
-            boss.moveToward(player.getCenterX(), player.getCenterY(), delta, obstacles, 64);
+        if (distance > 285f) {
+            if (boss.canUseRanged()) {
+                boss.fireProjectileBurst(player, projectiles, 4, 11f, 540f, 9f, 1.05f);
+            }
+
+            boss.setAnimationState(AnimationState.IDLE);
+            return;
+        }
+
+        if (distance > 175f) {
+            boss.moveToward(player.getCenterX(), player.getCenterY(), delta, obstacles, 175f);
             boss.setAnimationState(AnimationState.WALK);
         } else {
             boss.setAnimationState(AnimationState.IDLE);

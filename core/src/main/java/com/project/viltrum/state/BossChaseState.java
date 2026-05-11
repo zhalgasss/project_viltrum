@@ -72,18 +72,28 @@ public class BossChaseState implements BossState {
 
         float distance = boss.distanceTo(player.getCenterX(), player.getCenterY());
 
-        if (boss.canSummon()) {
-            boss.summonFlaxans(summons, 2);
-            boss.resetSummonCooldown(7.5f);
+        if (boss.canUseRepel() && ((boss.hasClosePressure() && distance < 190f) || distance < 58f)) {
+            if (boss.tryRepelPlayer(player, 6f, 560f, 2.2f)) {
+                return;
+            }
         }
 
-        if (boss.canUseSpecial() && distance < 145) {
-            boss.startTelegraphedAttack(145, 1.5f, 2.0f);
+        if (boss.canUseSpecial() && distance < 170f) {
+            boss.startTelegraphedAttack(155f, 0.4f, 1.35f);
             return;
         }
 
-        if (distance > 72) {
-            boss.moveToward(player.getCenterX(), player.getCenterY(), delta, obstacles, 72);
+        if (distance > 260f) {
+            if (boss.canUseRanged()) {
+                boss.fireProjectileBurst(player, projectiles, 3, 10f, 480f, 8f, 1.35f);
+            }
+
+            boss.setAnimationState(AnimationState.IDLE);
+            return;
+        }
+
+        if (distance > 160f) {
+            boss.moveToward(player.getCenterX(), player.getCenterY(), delta, obstacles, 160f);
             boss.setAnimationState(AnimationState.WALK);
         } else {
             boss.setAnimationState(AnimationState.IDLE);

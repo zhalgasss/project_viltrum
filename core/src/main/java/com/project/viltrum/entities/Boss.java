@@ -17,6 +17,9 @@ public class Boss extends Enemy {
     private float specialCooldown = 1.2f;
     private float rangedCooldown = 1.6f;
     private float summonCooldown = 4.5f;
+    private float repelCooldown = 0.8f;
+    private float closePressure = 0;
+    private float closePressureTimer = 0;
     private float dashTimer = 0;
     private float dashTargetX = 0;
     private float dashTargetY = 0;
@@ -84,6 +87,20 @@ public class Boss extends Enemy {
         return stats.hp / stats.maxHp;
     }
 
+    @Override
+    public void takeDamage(float damage, float sourceX, float sourceY, float knockback) {
+        super.takeDamage(damage, sourceX, sourceY, knockback);
+
+        if (!name.equals("Regent Thragg") || stats.isDead()) {
+            return;
+        }
+
+        if (distanceTo(sourceX, sourceY) <= 190f) {
+            closePressure = Math.min(4f, closePressure + 1f);
+            closePressureTimer = 1.7f;
+        }
+    }
+
     public boolean canUseSpecial() {
         return specialCooldown <= 0;
     }
@@ -96,6 +113,14 @@ public class Boss extends Enemy {
         return summonCooldown <= 0;
     }
 
+    public boolean canUseRepel() {
+        return repelCooldown <= 0;
+    }
+
+    public boolean hasClosePressure() {
+        return closePressure >= 2.5f;
+    }
+
     public void resetSpecialCooldown(float cooldown) {
         specialCooldown = cooldown;
     }
@@ -106,6 +131,10 @@ public class Boss extends Enemy {
 
     public void resetSummonCooldown(float cooldown) {
         summonCooldown = cooldown;
+    }
+
+    public void resetRepelCooldown(float cooldown) {
+        repelCooldown = cooldown;
     }
 
     public void startDash(Player player, float cooldown) {
@@ -139,9 +168,61 @@ public class Boss extends Enemy {
     }
 
     public Projectile fireProjectile(Player player, float speed, float damage) {
-        playLockedAnimation(AnimationState.ATTACK, 0.28f);
+        playLockedAnimation(AnimationState.ATTACK, 0.44f);
         EventBus.getInstance().publish(GameEvent.point(GameEventType.PROJECTILE_FIRED, getCenterX(), getCenterY()));
         return new Projectile(getCenterX(), getCenterY(), player.getCenterX(), player.getCenterY(), speed, damage);
+    }
+
+    public void fireProjectileBurst(
+        Player player,
+        List<Projectile> projectiles,
+        int count,
+        float spreadDegrees,
+        float speed,
+        float damage,
+        float cooldown
+    ) {
+        if (projectiles == null || count <= 0) {
+            return;
+        }
+
+        playLockedAnimation(AnimationState.ATTACK, 0.46f);
+        resetRangedCooldown(cooldown);
+
+        float originX = getCenterX();
+        float originY = getCenterY();
+        float targetX = player.getCenterX();
+        float targetY = player.getCenterY();
+        float baseAngle = (float) Math.atan2(targetY - originY, targetX - originX);
+        float middle = (count - 1) / 2f;
+
+        for (int i = 0; i < count; i++) {
+            float angle = baseAngle + (float) Math.toRadians((i - middle) * spreadDegrees);
+            float shotTargetX = originX + (float) Math.cos(angle) * 900f;
+            float shotTargetY = originY + (float) Math.sin(angle) * 900f;
+            projectiles.add(new Projectile(originX, originY, shotTargetX, shotTargetY, speed, damage));
+        }
+
+        EventBus.getInstance().publish(GameEvent.point(GameEventType.PROJECTILE_FIRED, originX, originY));
+        MusicManager.getInstance().playSound("dash");
+    }
+
+    public boolean tryRepelPlayer(Player player, float damage, float force, float cooldown) {
+        if (!canUseRepel() || stats.isDead()) {
+            return false;
+        }
+
+        resetRepelCooldown(cooldown);
+        closePressure = 0;
+        closePressureTimer = 0;
+        playLockedAnimation(AnimationState.ATTACK, 0.46f);
+
+        player.applyExternalKnockback(getCenterX(), getCenterY(), force);
+        player.takeDamage(damage, getCenterX(), getCenterY(), 0);
+
+        EventBus.getInstance().publish(GameEvent.point(GameEventType.HEAVY_HIT, getCenterX(), getCenterY()));
+        MusicManager.getInstance().playSound("dash");
+        return true;
     }
 
     public void startTelegraphedAttack(float radius, float warningDuration, float cooldownAfter) {
@@ -221,5 +302,12 @@ public class Boss extends Enemy {
         if (specialCooldown > 0) specialCooldown -= delta;
         if (rangedCooldown > 0) rangedCooldown -= delta;
         if (summonCooldown > 0) summonCooldown -= delta;
+        if (repelCooldown > 0) repelCooldown -= delta;
+
+        if (closePressureTimer > 0) {
+            closePressureTimer -= delta;
+        } else if (closePressure > 0) {
+            closePressure = Math.max(0, closePressure - delta * 1.4f);
+        }
     }
 }

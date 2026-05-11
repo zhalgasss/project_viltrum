@@ -64,6 +64,8 @@ public class Player {
         applyKnockback(delta, obstacles);
 
         boolean moving = move(delta, obstacles);
+        resolveObstacleOverlaps(obstacles);
+        clampToRoom();
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && attackCooldown <= 0) {
             attack(enemies, projectiles);
@@ -98,6 +100,10 @@ public class Player {
     }
 
     public boolean takeDamage(float damage, float sourceX, float sourceY) {
+        return takeDamage(damage, sourceX, sourceY, 165f);
+    }
+
+    public boolean takeDamage(float damage, float sourceX, float sourceY, float knockbackPower) {
         if (stats.isDead() || invulnerabilityTimer > 0) {
             return false;
         }
@@ -105,15 +111,7 @@ public class Player {
         stats.takeDamage(damage);
         invulnerabilityTimer = 0.7f;
         hurtTimer = 0.26f;
-
-        float dx = getCenterX() - sourceX;
-        float dy = getCenterY() - sourceY;
-        float length = (float) Math.sqrt(dx * dx + dy * dy);
-
-        if (length > 0) {
-            knockbackX = dx / length * 165f;
-            knockbackY = dy / length * 165f;
-        }
+        applyKnockbackFrom(sourceX, sourceY, knockbackPower);
 
         EventBus.getInstance().publish(GameEvent.damage(GameEventType.PLAYER_DAMAGED, getCenterX(), getCenterY(), damage));
         MusicManager.getInstance().playSound("hit");
@@ -125,6 +123,10 @@ public class Player {
         }
 
         return true;
+    }
+
+    public void applyExternalKnockback(float sourceX, float sourceY, float power) {
+        applyKnockbackFrom(sourceX, sourceY, power);
     }
 
     public Rectangle getHitbox() {
@@ -254,9 +256,9 @@ public class Player {
     }
 
     private void attack(List<Enemy> enemies, List<Projectile> projectiles) {
-        attackTimer = 0.18f;
-        attackCooldown = 0.42f;
-        animationStateMachine.playLocked(AnimationState.ATTACK, 0.28f);
+        attackTimer = 0.28f;
+        attackCooldown = 0.46f;
+        animationStateMachine.playLocked(AnimationState.ATTACK, 0.42f);
 
         if (type == HeroType.TECHNO_JACKET && projectiles != null) {
             fireTechnoShot(projectiles);
@@ -299,6 +301,58 @@ public class Player {
         moveAxis(0, knockbackY * delta, obstacles);
         knockbackX *= 0.82f;
         knockbackY *= 0.82f;
+    }
+
+    private void applyKnockbackFrom(float sourceX, float sourceY, float power) {
+        if (power <= 0) {
+            return;
+        }
+
+        float dx = getCenterX() - sourceX;
+        float dy = getCenterY() - sourceY;
+        float length = (float) Math.sqrt(dx * dx + dy * dy);
+
+        if (length == 0) {
+            dy = 1;
+            length = 1;
+        }
+
+        knockbackX = dx / length * power;
+        knockbackY = dy / length * power;
+    }
+
+    private void resolveObstacleOverlaps(List<Rectangle> obstacles) {
+        for (int pass = 0; pass < 5; pass++) {
+            boolean moved = false;
+            Rectangle own = getHitbox();
+
+            for (Rectangle obstacle : obstacles) {
+                if (!own.overlaps(obstacle)) {
+                    continue;
+                }
+
+                float pushLeft = own.x + own.width - obstacle.x;
+                float pushRight = obstacle.x + obstacle.width - own.x;
+                float pushDown = own.y + own.height - obstacle.y;
+                float pushUp = obstacle.y + obstacle.height - own.y;
+                float horizontal = Math.min(pushLeft, pushRight);
+                float vertical = Math.min(pushDown, pushUp);
+                float padding = 0.6f;
+
+                if (horizontal < vertical) {
+                    x += pushLeft < pushRight ? -horizontal - padding : horizontal + padding;
+                } else {
+                    y += pushDown < pushUp ? -vertical - padding : vertical + padding;
+                }
+
+                moved = true;
+                own = getHitbox();
+            }
+
+            if (!moved) {
+                return;
+            }
+        }
     }
 
     private void moveAxis(float dx, float dy, List<Rectangle> obstacles) {
