@@ -24,6 +24,7 @@ public class MenuScreen implements Screen {
     private final BitmapFont smallFont;
     private final Texture background;
     private final OrthographicCamera camera;
+    private final ScreenTransition transition;
 
     private int selectedHero = 0;
 
@@ -45,13 +46,20 @@ public class MenuScreen implements Screen {
         smallFont.getData().setScale(1.05f);
 
         background = new Texture("backgrounds/main_menu.jpg");
+        transition = new ScreenTransition();
         GameManager.getInstance().reset();
         MusicManager.getInstance().playMenuMusic();
     }
 
     @Override
     public void render(float delta) {
-        handleInput();
+        float frameDelta = Math.min(delta, 1f / 30f);
+        MusicManager.getInstance().update(frameDelta);
+        transition.update(frameDelta);
+
+        if (!transition.isExiting()) {
+            handleInput();
+        }
 
         Gdx.gl.glClearColor(0.01f, 0.01f, 0.04f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -97,6 +105,7 @@ public class MenuScreen implements Screen {
         smallFont.setColor(Color.WHITE);
         smallFont.draw(batch, "WASD - Move | SPACE - Attack | SHIFT - Dash | P - Pause", 390, 116);
         smallFont.draw(batch, "UP / DOWN to select, ENTER or 1-3 to start", 430, 78);
+        transition.draw(batch, 1280, 720);
         batch.end();
     }
 
@@ -137,8 +146,13 @@ public class MenuScreen implements Screen {
     }
 
     private void startGame() {
+        if (transition.isExiting()) {
+            return;
+        }
+
+        HeroType heroType = selectedHeroType();
         MusicManager.getInstance().playSound("menu_select");
-        game.setScreen(new GameScreen(game, selectedHeroType()));
+        transition.startExit(() -> game.setScreen(new GameScreen(game, heroType)));
     }
 
     private HeroType selectedHeroType() {
@@ -176,5 +190,6 @@ public class MenuScreen implements Screen {
         menuFont.dispose();
         smallFont.dispose();
         background.dispose();
+        transition.dispose();
     }
 }

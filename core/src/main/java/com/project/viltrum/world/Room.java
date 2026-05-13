@@ -26,7 +26,7 @@ public class Room {
     private List<Projectile> projectiles = new ArrayList<>();
     private List<HealthPickup> healthPickups = new ArrayList<>();
     private Boss boss;
-    private float healthSpawnTimer = 9f;
+    private float healthSpawnTimer = 4f;
 
     public Room(int roomNumber) {
         this.roomNumber = roomNumber;
@@ -61,6 +61,8 @@ public class Room {
             boss = EnemyFactory.createThragg(815, 470);
             addCommandRoomObstacles();
         }
+
+        spawnHealthPickup();
     }
 
     public void update(float delta, Player player) {
@@ -231,16 +233,14 @@ public class Room {
             return;
         }
 
-        healthSpawnTimer = MathUtils.random(11f, 17f);
-
-        if (healthPickups.size() >= 2 || MathUtils.randomBoolean(0.45f)) {
+        if (healthPickups.size() >= 2) {
             return;
         }
 
-        spawnHealthPickup();
+        healthSpawnTimer = spawnHealthPickup() ? MathUtils.random(8f, 12f) : 2f;
     }
 
-    private void spawnHealthPickup() {
+    private boolean spawnHealthPickup() {
         for (int attempt = 0; attempt < 18; attempt++) {
             float x = MathUtils.random(120f, 1120f);
             float y = MathUtils.random(105f, 575f);
@@ -256,9 +256,11 @@ public class Room {
 
             if (!blocked) {
                 healthPickups.add(new HealthPickup(x, y, 28));
-                return;
+                return true;
             }
         }
+
+        return false;
     }
 
     private Texture createHealthTexture() {

@@ -29,8 +29,8 @@ public class AnimationManager {
     public enum CharacterSprite {
         THRAGG(0),
         CONQUEST(1),
-        INVINCIBLE(2),
-        OMNI_MAN(3),
+        OMNI_MAN(2),
+        INVINCIBLE(3),
         TECHNO_JACKET(4),
         FLAXAN(5);
 
@@ -124,21 +124,21 @@ public class AnimationManager {
     }
 
     private void loadCharacterGridSheet(Pixmap pixmap) {
-        int[] rowTop = {75, 216, 360, 505, 652, 798};
-        int[] rowBottom = {214, 358, 503, 649, 796, 978};
+        int[] rowTop = {81, 229, 384, 535, 683, 833};
+        int[] rowBottom = {227, 382, 533, 681, 830, 1015};
         int row = Math.max(0, Math.min(gridRow, rowTop.length - 1));
         int y = rowTop[row];
         int height = rowBottom[row] - y + 1;
 
-        addWalkSection(pixmap, Direction.DOWN, 96, y, 136, height, 3);
-        addWalkSection(pixmap, Direction.LEFT, 233, y, 198, height, 5);
-        addWalkSection(pixmap, Direction.RIGHT, 433, y, 167, height, 4);
-        addWalkSection(pixmap, Direction.UP, 602, y, 156, height, 3);
+        addWalkSection(pixmap, Direction.DOWN, 103, y, 157, height, 3);
+        addWalkSection(pixmap, Direction.LEFT, 261, y, 180, height, 4);
+        addWalkSection(pixmap, Direction.RIGHT, 442, y, 180, height, 4);
+        addWalkSection(pixmap, Direction.UP, 623, y, 169, height, 3);
 
-        addSection(pixmap, AnimationState.ATTACK, Direction.DOWN, 759, y, 173, height, 3);
-        addSection(pixmap, AnimationState.ATTACK, Direction.LEFT, 934, y, 188, height, 3);
-        addSection(pixmap, AnimationState.ATTACK, Direction.RIGHT, 1124, y, 219, height, 3);
-        addSection(pixmap, AnimationState.ATTACK, Direction.UP, 1345, y, 189, height, 3);
+        addSection(pixmap, AnimationState.ATTACK, Direction.DOWN, 793, y, 165, height, 3);
+        addSection(pixmap, AnimationState.ATTACK, Direction.LEFT, 959, y, 191, height, 3);
+        addSection(pixmap, AnimationState.ATTACK, Direction.RIGHT, 1151, y, 201, height, 3);
+        addSection(pixmap, AnimationState.ATTACK, Direction.UP, 1354, y, 176, height, 3);
     }
 
     private void addWalkSection(

@@ -28,6 +28,7 @@ public class GameScreen implements Screen {
     private final GameCameraController cameraController;
     private final EffectsManager effectsManager;
     private final GameHud hud;
+    private final ScreenTransition transition;
 
     private Player player;
     private Room room;
@@ -48,6 +49,7 @@ public class GameScreen implements Screen {
         cameraController = new GameCameraController(camera);
         effectsManager = new EffectsManager();
         hud = new GameHud();
+        transition = new ScreenTransition();
 
         player = HeroFactory.createHero(selectedHero);
         room = new Room(GameManager.getInstance().getCurrentRoom());
@@ -77,14 +79,28 @@ public class GameScreen implements Screen {
         batch.end();
 
         hud.render(uiCamera, batch, player, room, paused, waveBannerTimer, getTransitionAlpha());
+
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
+        transition.draw(batch, 1280, 720);
+        batch.end();
     }
 
     private void update(float delta) {
+        MusicManager.getInstance().update(delta);
+        transition.update(delta);
+
+        if (transition.isExiting()) {
+            effectsManager.update(delta);
+            cameraController.update(delta, player.getCenterX(), player.getCenterY(), room.hasBossFight());
+            return;
+        }
+
         handlePauseInput();
 
         if (paused) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-                game.setScreen(new MenuScreen(game));
+                transition.startExit(() -> game.setScreen(new MenuScreen(game)));
             }
 
             cameraController.update(delta, player.getCenterX(), player.getCenterY(), room.hasBossFight());
@@ -106,7 +122,7 @@ public class GameScreen implements Screen {
         cameraController.update(delta, player.getCenterX(), player.getCenterY(), room.hasBossFight());
 
         if (player.getStats().isDead()) {
-            game.setScreen(new GameOverScreen(game));
+            transition.startExit(() -> game.setScreen(new GameOverScreen(game)));
             return;
         }
 
@@ -132,7 +148,7 @@ public class GameScreen implements Screen {
             transitionTimer = 0.55f;
             MusicManager.getInstance().playGameMusic(room.hasBossFight());
         } else {
-            game.setScreen(new WinScreen(game));
+            transition.startExit(() -> game.setScreen(new WinScreen(game)));
         }
     }
 
@@ -175,5 +191,6 @@ public class GameScreen implements Screen {
         cameraController.dispose();
         room.dispose();
         player.dispose();
+        transition.dispose();
     }
 }
