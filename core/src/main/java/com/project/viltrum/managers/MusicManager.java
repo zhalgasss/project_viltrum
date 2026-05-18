@@ -51,7 +51,7 @@ public class MusicManager {
     }
 
     public void playVictoryMusic() {
-        playMusic("audio/sfx/victory_chorus.mp3", 0.7f, false);
+        playMusic("audio/sfx/audio.mp3", 0.7f, false, 12f);
     }
 
     public void playSound(String id) {
